@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Clean Architecture — Detalhe por Função</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #080b10;
+      --surface:  #0d111a;
+      --card:     #111722;
+      --border:   #1a2030;
+      --border2:  #222d40;
+
+      --domain:   #22d3ee;
+      --app:      #c084fc;
+      --infra:    #4ade80;
+      --present:  #fb923c;
+      --config:   #facc15;
+
+      --text:     #e2e8f0;
+      --muted:    #4a5568;
+      --soft:     #94a3b8;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Outfit', sans-serif;
+      padding: 48px 20px 80px;
+      min-height: 100vh;
+    }
+
+    /* HEADER */
+    .header { text-align: center; margin-bottom: 48px; }
+    .header h1 {
+      font-size: clamp(1.6rem, 3vw, 2.4rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--domain) 0%, var(--app) 50%, var(--infra) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .header p {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.06em;
+    }
+
+    /* DEP ARROW */
+    .dep-banner {
+      max-width: 900px;
+      margin: 0 auto 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 24px;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .dep-node {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+    .dep-arrow {
+      color: var(--border2);
+      font-size: 1.2rem;
+      padding: 0 6px;
+      align-self: center;
+    }
+    .dep-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.6rem;
+      color: var(--muted);
+      margin-left: 12px;
+      align-self: center;
+    }
+
+    /* COLUMNS */
+    .columns {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 20px;
+      max-width: 1400px;
+      margin: 0 auto 48px;
+      align-items: start;
+    }
+
+    /* LAYER */
+    .layer {
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      overflow: hidden;
+    }
+    .layer-top {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .layer-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .layer-title {
+      font-size: 0.65rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    .layer-rule {
+      font-size: 0.62rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+      margin-left: auto;
+    }
+    .layer-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+
+    /* CLASS CARD */
+    .cls {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .cls:hover { border-color: var(--border2); }
+
+    .cls-head {
+      padding: 10px 12px 8px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .cls-icon { font-size: 0.9rem; flex-shrink: 0; margin-top: 1px; }
+    .cls-meta { flex: 1; min-width: 0; }
+    .cls-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cls-stereo {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .cls-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.52rem;
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid;
+      flex-shrink: 0;
+      white-space: nowrap;
+      align-self: flex-start;
+    }
+
+    /* MEMBERS */
+    .members { padding: 8px 12px 10px; display: flex; flex-direction: column; gap: 3px; }
+
+    .member {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      padding: 3px 6px;
+      border-radius: 5px;
+      transition: background 0.15s;
+    }
+    .member:hover { background: #ffffff06; }
+
+    .member-kind {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      width: 14px;
+      flex-shrink: 0;
+      text-align: center;
+    }
+    .mk-field    { color: #60a5fa; }
+    .mk-method   { color: #4ade80; }
+    .mk-static   { color: #f472b6; }
+    .mk-const    { color: #fbbf24; }
+    .mk-record   { color: #a78bfa; }
+    .mk-inner    { color: #94a3b8; }
+
+    .member-sig {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--soft);
+      flex: 1;
+      line-height: 1.4;
+    }
+    .member-sig .type  { color: #7dd3fc; }
+    .member-sig .name  { color: #e2e8f0; font-weight: 600; }
+    .member-sig .param { color: #94a3b8; }
+    .member-sig .ret   { color: #86efac; }
+    .member-sig .kw    { color: #c084fc; }
+    .member-sig .note  { color: #4a5568; font-size: 0.58rem; }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+
+    /* FLOW */
+    .flow-wrap {
+      max-width: 1400px;
+      margin: 0 auto 48px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 28px;
+    }
+    .flow-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .flow-row {
+      display: flex;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .flow-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+    .flow-box {
+      border: 1px solid;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-align: center;
+      min-width: 110px;
+    }
+    .flow-fn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.56rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    .flow-arr {
+      align-self: center;
+      color: #2d3748;
+      font-size: 1.2rem;
+      margin-bottom: 18px;
+    }
+
+    /* COLORS per layer */
+    .layer.domain  .layer-dot,
+    .layer.domain  .layer-title { color: var(--domain); }
+    .layer.domain  .layer-dot   { background: var(--domain); }
+    .layer.domain  .cls-name    { color: var(--domain); }
+
+    .layer.app     .layer-dot,
+    .layer.app     .layer-title { color: var(--app); }
+    .layer.app     .layer-dot   { background: var(--app); }
+    .layer.app     .cls-name    { color: var(--app); }
+
+    .layer.infra   .layer-dot,
+    .layer.infra   .layer-title { color: var(--infra); }
+    .layer.infra   .layer-dot   { background: var(--infra); }
+    .layer.infra   .cls-name    { color: var(--infra); }
+
+    .layer.present .layer-dot,
+    .layer.present .layer-title { color: var(--present); }
+    .layer.present .layer-dot   { background: var(--present); }
+    .layer.present .cls-name    { color: var(--present); }
+
+    .layer.config  .layer-dot,
+    .layer.config  .layer-title { color: var(--config); }
+    .layer.config  .layer-dot   { background: var(--config); }
+    .layer.config  .cls-name    { color: var(--config); }
+
+    /* badges */
+    .b-class     { color:#60a5fa; border-color:#60a5fa40; background:#60a5fa0d; }
+    .b-interface { color:#f472b6; border-color:#f472b640; background:#f472b60d; }
+    .b-record    { color:#a78bfa; border-color:#a78bfa40; background:#a78bfa0d; }
+    .b-exception { color:#f87171; border-color:#f8717140; background:#f871710d; }
+
+    /* flow colors */
+    .fi-present .flow-box { color:var(--present); border-color:var(--present)50; background:#fb923c0d; }
+    .fi-app     .flow-box { color:var(--app);     border-color:var(--app)50;     background:#c084fc0d; }
+    .fi-domain  .flow-box { color:var(--domain);  border-color:var(--domain)50;  background:#22d3ee0d; }
+    .fi-infra   .flow-box { color:var(--infra);   border-color:var(--infra)50;   background:#4ade800d; }
+
+    /* pkg separator */
+    .pkg-sep {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.58rem;
+      color: var(--muted);
+      letter-spacing: 0.08em;
+      padding: 2px 4px;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pkg-sep::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Clean Architecture · Task Manager</h1>
+  <p>com.gustavohub.clean · detalhe por classe e função</p>
+</div>
+
+<!-- DEP RULE -->
+<div class="dep-banner">
+  <div class="dep-node" style="color:var(--present);border-color:var(--present)50;background:#fb923c0d">presentation</div>
+  <div class="dep-arrow">→</div>
+  <div class="dep-node" style="color:var(--app);border-color:var(--app)50;background:#c084fc0d">application</div>
+  <div class="dep-arrow">→</div>
+  <div class="dep-node" style="color:var(--domain);border-color:var(--domain)50;background:#22d3ee0d">domain</div>
+  <div class="dep-arrow">←</div>
+  <div class="dep-node" style="color:var(--infra);border-color:var(--infra)50;background:#4ade800d">infrastructure</div>
+  <div class="dep-label">dependências sempre apontam para dentro · domain não conhece ninguém</div>
+</div>
+
+<div class="columns">
+
+  <!-- ══════════════ DOMAIN ══════════════ -->
+  <div class="layer domain">
+    <div class="layer-top">
+      <div class="layer-dot"></div>
+      <div class="layer-title">domain</div>
+      <div class="layer-rule">zero imports de framework</div>
+    </div>
+    <div class="layer-body">
+
+      <!-- Task -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">🧩</div>
+          <div class="cls-meta">
+            <div class="cls-name">Task</div>
+            <div class="cls-stereo">domain/entity</div>
+          </div>
+          <span class="cls-badge b-class">class</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="kw">final</span> <span class="type">String</span> <span class="name">id</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">String</span> <span class="name">title</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">String</span> <span class="name">description</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">boolean</span> <span class="name">completed</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="kw">final</span> <span class="type">LocalDateTime</span> <span class="name">createdAt</span></span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-static">s</span><span class="member-sig"><span class="ret">Task</span> <span class="name">create</span>(<span class="param">String title, String description</span>) <span class="note">// valida + UUID</span></span></div>
+          <div class="member"><span class="member-kind mk-static">s</span><span class="member-sig"><span class="ret">Task</span> <span class="name">reconstitute</span>(<span class="param">Long id, String title, ...</span>) <span class="note">// restaura do banco</span></span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">void</span> <span class="name">complete</span>() <span class="note">// lança se já concluída</span></span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">void</span> <span class="name">update</span>(<span class="param">String title, String description</span>)</span></div>
+          <div class="member"><span class="member-kind mk-static">p</span><span class="member-sig"><span class="ret">void</span> <span class="name">validate</span>(<span class="param">String title</span>) <span class="note">// private · blank/255</span></span></div>
+        </div>
+      </div>
+
+      <!-- TaskRepository interface -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">🔌</div>
+          <div class="cls-meta">
+            <div class="cls-name">TaskRepository</div>
+            <div class="cls-stereo">domain/repository · output port</div>
+          </div>
+          <span class="cls-badge b-interface">interface</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">Task</span> <span class="name">save</span>(<span class="param">Task task</span>) <span class="note">// create + update</span></span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">Optional&lt;Task&gt;</span> <span class="name">findById</span>(<span class="param">Long id</span>)</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">List&lt;Task&gt;</span> <span class="name">findAll</span>()</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">void</span> <span class="name">deleteById</span>(<span class="param">Long id</span>)</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">boolean</span> <span class="name">existsById</span>(<span class="param">Long id</span>)</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════ APPLICATION ══════════════ -->
+  <div class="layer app">
+    <div class="layer-top">
+      <div class="layer-dot"></div>
+      <div class="layer-title">application</div>
+      <div class="layer-rule">sem @Service · sem framework</div>
+    </div>
+    <div class="layer-body">
+
+      <!-- TaskNotFoundException -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">🚨</div>
+          <div class="cls-meta">
+            <div class="cls-name">TaskNotFoundException</div>
+            <div class="cls-stereo">usecase/tasks</div>
+          </div>
+          <span class="cls-badge b-exception">exception</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="name">TaskNotFoundException</span>(<span class="param">Long id</span>) <span class="note">// extends RuntimeException</span></span></div>
+        </div>
+      </div>
+
+      <!-- CreateTaskUseCase -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">⚡</div>
+          <div class="cls-meta">
+            <div class="cls-name">CreateTaskUseCase</div>
+            <div class="cls-stereo">usecase/tasks</div>
+          </div>
+          <span class="cls-badge b-class">class</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="kw">final</span> <span class="type">TaskRepository</span> <span class="name">taskRepository</span></span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-inner">r</span><span class="member-sig"><span class="kw">record</span> <span class="name">Input</span>(<span class="param">String title, String description</span>)</span></div>
+          <div class="member"><span class="member-kind mk-inner">r</span><span class="member-sig"><span class="kw">record</span> <span class="name">Output</span>(<span class="param">Long id, String title, String description, boolean completed</span>)</span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">Output</span> <span class="name">execute</span>(<span class="param">Input input</span>) <span class="note">// Task.create() → save() → Output</span></span></div>
+        </div>
+      </div>
+
+      <!-- CompleteTaskUseCase -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">⚡</div>
+          <div class="cls-meta">
+            <div class="cls-name">CompleteTaskUseCase</div>
+            <div class="cls-stereo">usecase/tasks</div>
+          </div>
+          <span class="cls-badge b-class">class</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">TaskRepository</span> <span class="name">taskRepository</span></span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-inner">r</span><span class="member-sig"><span class="kw">record</span> <span class="name">Output</span>(<span class="param">Long id, String title, String description, boolean completed</span>)</span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">Output</span> <span class="name">execute</span>(<span class="param">Long id</span>) <span class="note">// findById → task.complete() → save()</span></span></div>
+        </div>
+      </div>
+
+      <!-- UpdateTaskUseCase -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">⚡</div>
+          <div class="cls-meta">
+            <div class="cls-name">UpdateTaskUseCase</div>
+            <div class="cls-stereo">usecase/tasks</div>
+          </div>
+          <span class="cls-badge b-class">class</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">TaskRepository</span> <span class="name">taskRepository</span></span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-inner">r</span><span class="member-sig"><span class="kw">record</span> <span class="name">Input</span>(<span class="param">Long id, String title, String description</span>)</span></div>
+          <div class="member"><span class="member-kind mk-inner">r</span><span class="member-sig"><span class="kw">record</span> <span class="name">Output</span>(<span class="param">Long id, String title, String description, boolean completed</span>)</span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">Output</span> <span class="name">execute</span>(<span class="param">Input input</span>) <span class="note">// findById → task.update() → save()</span></span></div>
+        </div>
+      </div>
+
+      <!-- GetTaskByIdUseCase -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">⚡</div>
+          <div class="cls-meta">
+            <div class="cls-name">GetTaskByIdUseCase</div>
+            <div class="cls-stereo">usecase/tasks</div>
+          </div>
+          <span class="cls-badge b-class">class</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">TaskRepository</span> <span class="name">taskRepository</span></span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-inner">r</span><span class="member-sig"><span class="kw">record</span> <span class="name">Output</span>(<span class="param">Long id, String title, String description, boolean completed</span>)</span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">Output</span> <span class="name">execute</span>(<span class="param">Long id</span>) <span class="note">// findById ou TaskNotFoundException</span></span></div>
+        </div>
+      </div>
+
+      <!-- GetAllTasksUseCase -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">⚡</div>
+          <div class="cls-meta">
+            <div class="cls-name">GetAllTasksUseCase</div>
+            <div class="cls-stereo">usecase/tasks</div>
+          </div>
+          <span class="cls-badge b-class">class</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">TaskRepository</span> <span class="name">taskRepository</span></span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-inner">r</span><span class="member-sig"><span class="kw">record</span> <span class="name">Output</span>(<span class="param">Long id, String title, String description, boolean completed</span>)</span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">List&lt;Output&gt;</span> <span class="name">execute</span>() <span class="note">// findAll() → stream → map</span></span></div>
+        </div>
+      </div>
+
+      <!-- DeleteTaskUseCase -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">⚡</div>
+          <div class="cls-meta">
+            <div class="cls-name">DeleteTaskUseCase</div>
+            <div class="cls-stereo">usecase/tasks</div>
+          </div>
+          <span class="cls-badge b-class">class</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">TaskRepository</span> <span class="name">taskRepository</span></span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">void</span> <span class="name">execute</span>(<span class="param">Long id</span>) <span class="note">// findById → deleteById</span></span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════ INFRASTRUCTURE ══════════════ -->
+  <div class="layer infra">
+    <div class="layer-top">
+      <div class="layer-dot"></div>
+      <div class="layer-title">infrastructure</div>
+      <div class="layer-rule">implementa interfaces do domínio</div>
+    </div>
+    <div class="layer-body">
+
+      <div class="pkg-sep">repository / memory</div>
+
+      <!-- InMemoryTaskRepository -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">💾</div>
+          <div class="cls-meta">
+            <div class="cls-name">InMemoryTaskRepository</div>
+            <div class="cls-stereo">implements TaskRepository</div>
+          </div>
+          <span class="cls-badge b-class">class</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">Map&lt;Long, Task&gt;</span> <span class="name">storage</span> <span class="note">= new HashMap()</span></span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">Task</span> <span class="name">save</span>(<span class="param">Task task</span>) <span class="note">// storage.put(id, task)</span></span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">Optional&lt;Task&gt;</span> <span class="name">findById</span>(<span class="param">Long id</span>)</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">List&lt;Task&gt;</span> <span class="name">findAll</span>()</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">void</span> <span class="name">deleteById</span>(<span class="param">Long id</span>)</span></div>
+        </div>
+      </div>
+
+      <div class="pkg-sep">repository / jpa</div>
+
+      <!-- TaskJpaEntity -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">📦</div>
+          <div class="cls-meta">
+            <div class="cls-name">TaskJpaEntity</div>
+            <div class="cls-stereo">@Entity · package-private</div>
+          </div>
+          <span class="cls-badge b-class">class</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">@Id String</span> <span class="name">id</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">String</span> <span class="name">title</span>, <span class="name">description</span>, <span class="name">status</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">boolean</span> <span class="name">completed</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">LocalDateTime</span> <span class="name">createdAt</span></span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">protected TaskJpaEntity() // obrigatório JPA</span></span></div>
+        </div>
+      </div>
+
+      <!-- TaskJpaMapper -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">🔄</div>
+          <div class="cls-meta">
+            <div class="cls-name">TaskJpaMapper</div>
+            <div class="cls-stereo">package-private · converte domínio ↔ JPA</div>
+          </div>
+          <span class="cls-badge b-class">class</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-static">s</span><span class="member-sig"><span class="ret">TaskJpaEntity</span> <span class="name">toJpaEntity</span>(<span class="param">Task task</span>)</span></div>
+          <div class="member"><span class="member-kind mk-static">s</span><span class="member-sig"><span class="ret">Task</span> <span class="name">toDomain</span>(<span class="param">TaskJpaEntity entity</span>) <span class="note">// Task.reconstitute()</span></span></div>
+        </div>
+      </div>
+
+      <!-- SpringDataTaskRepository -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">🔌</div>
+          <div class="cls-meta">
+            <div class="cls-name">SpringDataTaskRepository</div>
+            <div class="cls-stereo">extends JpaRepository · package-private</div>
+          </div>
+          <span class="cls-badge b-interface">interface</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-note" style="color:var(--muted);font-size:0.58rem;padding:2px 4px">JpaRepository&lt;TaskJpaEntity, String&gt;</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">// confinado aqui · domínio nunca o vê</span></span></div>
+        </div>
+      </div>
+
+      <!-- TaskJpaAdapter -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">🗄️</div>
+          <div class="cls-meta">
+            <div class="cls-name">TaskJpaAdapter</div>
+            <div class="cls-stereo">implements TaskRepository · @Component</div>
+          </div>
+          <span class="cls-badge b-class">class</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">SpringDataTaskRepository</span> <span class="name">jpaRepository</span></span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">Task</span> <span class="name">save</span>(<span class="param">Task</span>) <span class="note">// toJpaEntity → jpa.save → toDomain</span></span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">Optional&lt;Task&gt;</span> <span class="name">findById</span>(<span class="param">Long id</span>) <span class="note">// toDomain</span></span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">List&lt;Task&gt;</span> <span class="name">findAll</span>() <span class="note">// stream → toDomain</span></span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="ret">void</span> <span class="name">deleteById</span>(<span class="param">Long id</span>)</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════ PRESENTATION ══════════════ -->
+  <div class="layer present">
+    <div class="layer-top">
+      <div class="layer-dot"></div>
+      <div class="layer-title">presentation</div>
+      <div class="layer-rule">HTTP → UseCase → HTTP</div>
+    </div>
+    <div class="layer-body">
+
+      <!-- TaskRequest -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">📨</div>
+          <div class="cls-meta">
+            <div class="cls-name">TaskRequest</div>
+            <div class="cls-stereo">dto · dados de entrada da API</div>
+          </div>
+          <span class="cls-badge b-record">record</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">String</span> <span class="name">title</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">String</span> <span class="name">description</span></span></div>
+        </div>
+      </div>
+
+      <!-- TaskResponse -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">📤</div>
+          <div class="cls-meta">
+            <div class="cls-name">TaskResponse</div>
+            <div class="cls-stereo">dto · dados de saída da API</div>
+          </div>
+          <span class="cls-badge b-record">record</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">String</span> <span class="name">id</span>, <span class="name">title</span>, <span class="name">description</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">boolean</span> <span class="name">completed</span></span></div>
+          <div class="member"><span class="member-kind mk-static">s</span><span class="member-sig"><span class="ret">TaskResponse</span> <span class="name">from</span>(<span class="param">Output output</span>) <span class="note">// factory estático</span></span></div>
+        </div>
+      </div>
+
+      <!-- TaskController -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">🌐</div>
+          <div class="cls-meta">
+            <div class="cls-name">TaskController</div>
+            <div class="cls-stereo">@RestController · /api/tasks</div>
+          </div>
+          <span class="cls-badge b-class">class</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">CreateTaskUseCase</span> <span class="name">createTaskUseCase</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">CompleteTaskUseCase</span> <span class="name">completeTaskUseCase</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">UpdateTaskUseCase</span> <span class="name">updateTaskUseCase</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">GetTaskByIdUseCase</span> <span class="name">getTaskByIdUseCase</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">GetAllTasksUseCase</span> <span class="name">getAllTasksUseCase</span></span></div>
+          <div class="member"><span class="member-kind mk-field">f</span><span class="member-sig"><span class="type">DeleteTaskUseCase</span> <span class="name">deleteTaskUseCase</span></span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@PostMapping</span> <span class="ret">ResponseEntity</span> <span class="name">create</span>(<span class="param">@RequestBody TaskRequest</span>)</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@PatchMapping /{id}/complete</span> <span class="ret">ResponseEntity</span> <span class="name">complete</span>(<span class="param">Long id</span>)</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@PutMapping /{id}</span> <span class="ret">ResponseEntity</span> <span class="name">update</span>(<span class="param">String id, TaskRequest</span>)</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@GetMapping /{id}</span> <span class="ret">ResponseEntity</span> <span class="name">getById</span>(<span class="param">String id</span>)</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@GetMapping</span> <span class="ret">ResponseEntity</span> <span class="name">getAll</span>()</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@DeleteMapping /{id}</span> <span class="ret">ResponseEntity</span> <span class="name">delete</span>(<span class="param">String id</span>)</span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@ExceptionHandler</span> <span class="name">handleNotFound</span> <span class="note">→ 404</span></span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@ExceptionHandler</span> <span class="name">handleConflict</span> <span class="note">→ 409</span></span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════════════ CONFIG ══════════════ -->
+  <div class="layer config">
+    <div class="layer-top">
+      <div class="layer-dot"></div>
+      <div class="layer-title">config</div>
+      <div class="layer-rule">composition root · wiring</div>
+    </div>
+    <div class="layer-body">
+
+      <!-- BeanConfiguration -->
+      <div class="cls">
+        <div class="cls-head">
+          <div class="cls-icon">⚙️</div>
+          <div class="cls-meta">
+            <div class="cls-name">BeanConfiguration</div>
+            <div class="cls-stereo">@Configuration · registra use cases</div>
+          </div>
+          <span class="cls-badge b-class">class</span>
+        </div>
+        <div class="members">
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@Bean</span> <span class="ret">CreateTaskUseCase</span> <span class="name">createTaskUseCase</span>(<span class="param">TaskRepository</span>)</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@Bean</span> <span class="ret">CompleteTaskUseCase</span> <span class="name">completeTaskUseCase</span>(<span class="param">TaskRepository</span>)</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@Bean</span> <span class="ret">UpdateTaskUseCase</span> <span class="name">updateTaskUseCase</span>(<span class="param">TaskRepository</span>)</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@Bean</span> <span class="ret">GetTaskByIdUseCase</span> <span class="name">getTaskByIdUseCase</span>(<span class="param">TaskRepository</span>)</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@Bean</span> <span class="ret">GetAllTasksUseCase</span> <span class="name">getAllTasksUseCase</span>(<span class="param">TaskRepository</span>)</span></div>
+          <div class="member"><span class="member-kind mk-method">m</span><span class="member-sig"><span class="note">@Bean</span> <span class="ret">DeleteTaskUseCase</span> <span class="name">deleteTaskUseCase</span>(<span class="param">TaskRepository</span>)</span></div>
+          <div class="divider"></div>
+          <div class="member"><span class="member-kind mk-note" style="color:var(--muted);font-size:0.6rem;padding:2px 4px">// Spring injeta TaskRepository → JPA ou InMemory via @Primary</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- REQUEST FLOW -->
+<div class="flow-wrap">
+  <div class="flow-label">// fluxo completo · POST /api/tasks</div>
+  <div class="flow-row">
+    <div class="flow-item fi-present">
+      <div class="flow-box">TaskController</div>
+      <div class="flow-fn">@PostMapping<br>TaskRequest → Input</div>
+    </div>
+    <div class="flow-arr">→</div>
+    <div class="flow-item fi-app">
+      <div class="flow-box">CreateTaskUseCase</div>
+      <div class="flow-fn">execute(Input)<br>orquestra</div>
+    </div>
+    <div class="flow-arr">→</div>
+    <div class="flow-item fi-domain">
+      <div class="flow-box">Task.create()</div>
+      <div class="flow-fn">valida título<br>gera UUID</div>
+    </div>
+    <div class="flow-arr">→</div>
+    <div class="flow-item fi-domain">
+      <div class="flow-box">TaskRepository</div>
+      <div class="flow-fn">interface<br>save(task)</div>
+    </div>
+    <div class="flow-arr">→</div>
+    <div class="flow-item fi-infra">
+      <div class="flow-box">TaskJpaAdapter</div>
+      <div class="flow-fn">implements<br>toJpaEntity()</div>
+    </div>
+    <div class="flow-arr">→</div>
+    <div class="flow-item fi-infra">
+      <div class="flow-box">SpringDataRepo</div>
+      <div class="flow-fn">jpa.save()<br>Hibernate</div>
+    </div>
+    <div class="flow-arr">→</div>
+    <div class="flow-item fi-infra">
+      <div class="flow-box">TaskJpaMapper</div>
+      <div class="flow-fn">toDomain()<br>reconstitute()</div>
+    </div>
+    <div class="flow-arr">→</div>
+    <div class="flow-item fi-app">
+      <div class="flow-box">Output record</div>
+      <div class="flow-fn">id, title<br>description, completed</div>
+    </div>
+    <div class="flow-arr">→</div>
+    <div class="flow-item fi-present">
+      <div class="flow-box">TaskResponse</div>
+      <div class="flow-fn">TaskResponse.from()<br>HTTP 201</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
