@@ -32,12 +32,6 @@ public class InMemoryTaskRepository implements TaskRepository {
     }
 
     @Override
-    public Task update(Task task) {
-        storage.put(task.getId(), task);
-        return task;
-    }
-
-    @Override
     public void deleteById(String id) {
         storage.remove(id);
     }

@@ -10,6 +10,5 @@ public interface TaskRepository {
     Task save(Task task);
     List<Task> findAll();
     Optional<Task> findById(String id);
-    Task update(Task task);
     void deleteById(String id);
 }
