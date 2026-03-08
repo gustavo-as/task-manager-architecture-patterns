@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Clean Architecture — Task Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0b0e14;
+    --surface:   #111520;
+    --border:    #1e2535;
+
+    --domain:    #00e5ff;
+    --domain-bg: #00e5ff12;
+    --app:       #a78bfa;
+    --app-bg:    #a78bfa12;
+    --infra:     #34d399;
+    --infra-bg:  #34d39912;
+    --present:   #fb923c;
+    --present-bg:#fb923c12;
+
+    --text:      #e2e8f0;
+    --muted:     #64748b;
+    --tag:       #1e2535;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    padding: 40px 24px 60px;
+  }
+
+  h1 {
+    text-align: center;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+    background: linear-gradient(90deg, var(--domain), var(--app), var(--infra));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    margin-bottom: 40px;
+  }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 36px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78rem;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+
+  /* ── DEPENDENCY RULE ARROW ── */
+  .dep-rule {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 36px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+  .dep-rule span {
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .dep-rule .arrow { color: #475569; font-size: 1rem; }
+
+  /* ── GRID ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+    max-width: 1200px;
+    margin: 0 auto 40px;
+  }
+
+  /* ── LAYER CARD ── */
+  .layer {
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+    background: var(--surface);
+    position: relative;
+  }
+  .layer::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .layer.domain::before  { background: var(--domain); }
+  .layer.app::before     { background: var(--app); }
+  .layer.infra::before   { background: var(--infra); }
+  .layer.present::before { background: var(--present); }
+
+  .layer-header {
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .layer-name {
+    font-size: 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .layer.domain  .layer-name  { color: var(--domain); }
+  .layer.app     .layer-name  { color: var(--app); }
+  .layer.infra   .layer-name  { color: var(--infra); }
+  .layer.present .layer-name  { color: var(--present); }
+
+  .layer-desc {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.4;
+  }
+
+  .layer-body { padding: 14px 18px 18px; }
+
+  /* ── PACKAGE ── */
+  .pkg { margin-bottom: 14px; }
+  .pkg:last-child { margin-bottom: 0; }
+
+  .pkg-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    margin-bottom: 7px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .pkg-name::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── FILE PILL ── */
+  .files { display: flex; flex-direction: column; gap: 5px; }
+
+  .file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    transition: border-color 0.15s, background 0.15s;
+    cursor: default;
+  }
+  .file:hover { background: #131825; }
+  .layer.domain  .file:hover { border-color: var(--domain); background: var(--domain-bg); }
+  .layer.app     .file:hover { border-color: var(--app);    background: var(--app-bg); }
+  .layer.infra   .file:hover { border-color: var(--infra);  background: var(--infra-bg); }
+  .layer.present .file:hover { border-color: var(--present);background: var(--present-bg); }
+
+  .file-icon {
+    font-size: 0.7rem;
+    width: 18px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .file-info { flex: 1; min-width: 0; }
+
+  .file-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .layer.domain  .file-name { color: var(--domain); }
+  .layer.app     .file-name { color: var(--app); }
+  .layer.infra   .file-name { color: var(--infra); }
+  .layer.present .file-name { color: var(--present); }
+
+  .file-note {
+    font-size: 0.62rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 1px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .badge-class     { color: #60a5fa; border-color: #60a5fa40; background: #60a5fa10; }
+  .badge-interface { color: #f472b6; border-color: #f472b640; background: #f472b610; }
+  .badge-record    { color: #fbbf24; border-color: #fbbf2440; background: #fbbf2410; }
+  .badge-enum      { color: #a3e635; border-color: #a3e63540; background: #a3e63510; }
+  .badge-exception { color: #f87171; border-color: #f8717140; background: #f8717110; }
+
+  /* ── FLOW SECTION ── */
+  .flow-section {
+    max-width: 1200px;
+    margin: 0 auto 40px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px 28px;
+  }
+  .flow-title {
+    font-size: 0.7rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+  .flow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0;
+  }
+  .flow-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .flow-box {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .flow-layer {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--muted);
+  }
+  .flow-arrow {
+    color: #334155;
+    font-size: 1.1rem;
+    padding: 0 4px;
+    align-self: center;
+    margin-bottom: 20px;
+  }
+  .flow-step.domain  .flow-box { color: var(--domain);  border-color: var(--domain);  background: var(--domain-bg); }
+  .flow-step.app     .flow-box { color: var(--app);     border-color: var(--app);     background: var(--app-bg); }
+  .flow-step.infra   .flow-box { color: var(--infra);   border-color: var(--infra);   background: var(--infra-bg); }
+  .flow-step.present .flow-box { color: var(--present); border-color: var(--present); background: var(--present-bg); }
+
+  /* ── RULE BOX ── */
+  .rules {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .rule {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .rule-icon { font-size: 1.2rem; margin-bottom: 6px; }
+  .rule-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text);
+  }
+  .rule-desc {
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<h1>Clean Architecture — Task Manager</h1>
+<p class="subtitle">com.gustavohub.clean · estrutura de pacotes e responsabilidades</p>
+
+<!-- LEGEND -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:var(--domain)"></div>domain</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--app)"></div>application</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--infra)"></div>infrastructure</div>
+  <div class="legend-item"><div class="legend-dot" style="background:var(--present)"></div>presentation</div>
+</div>
+
+<!-- DEPENDENCY RULE -->
+<div class="dep-rule">
+  <span style="color:var(--present)">presentation</span>
+  <span class="arrow">→</span>
+  <span style="color:var(--app)">application</span>
+  <span class="arrow">→</span>
+  <span style="color:var(--domain)">domain</span>
+  <span class="arrow">←</span>
+  <span style="color:var(--infra)">infrastructure</span>
+  <span style="color:var(--muted);font-size:0.65rem;margin-left:8px">dependências apontam para dentro</span>
+</div>
+
+<!-- LAYER CARDS -->
+<div class="grid">
+
+  <!-- DOMAIN -->
+  <div class="layer domain">
+    <div class="layer-header">
+      <div class="layer-name">domain</div>
+      <div class="layer-desc">zero dependências · regras de negócio puras</div>
+    </div>
+    <div class="layer-body">
+      <div class="pkg">
+        <div class="pkg-name">entity</div>
+        <div class="files">
+          <div class="file">
+            <div class="file-icon">🧩</div>
+            <div class="file-info">
+              <div class="file-name">Task.java</div>
+              <div class="file-note">create() · reconstitute() · complete() · update()</div>
+            </div>
+            <span class="badge badge-class">class</span>
+          </div>
+        </div>
+      </div>
+      <div class="pkg">
+        <div class="pkg-name">repository</div>
+        <div class="files">
+          <div class="file">
+            <div class="file-icon">🔌</div>
+            <div class="file-info">
+              <div class="file-name">TaskRepository.java</div>
+              <div class="file-note">save · findAll · findById · deleteById</div>
+            </div>
+            <span class="badge badge-interface">interface</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- APPLICATION -->
+  <div class="layer app">
+    <div class="layer-header">
+      <div class="layer-name">application</div>
+      <div class="layer-desc">orquestra domínio · sem @Service · sem framework</div>
+    </div>
+    <div class="layer-body">
+      <div class="pkg">
+        <div class="pkg-name">usecase / tasks</div>
+        <div class="files">
+          <div class="file">
+            <div class="file-icon">⚡</div>
+            <div class="file-info">
+              <div class="file-name">CreateTaskUseCase.java</div>
+              <div class="file-note">Input record · Output record · execute()</div>
+            </div>
+            <span class="badge badge-class">class</span>
+          </div>
+          <div class="file">
+            <div class="file-icon">⚡</div>
+            <div class="file-info">
+              <div class="file-name">CompleteTaskUseCase.java</div>
+              <div class="file-note">Output record · execute(String id)</div>
+            </div>
+            <span class="badge badge-class">class</span>
+          </div>
+          <div class="file">
+            <div class="file-icon">⚡</div>
+            <div class="file-info">
+              <div class="file-name">UpdateTaskUseCase.java</div>
+              <div class="file-note">Input record · Output record · execute()</div>
+            </div>
+            <span class="badge badge-class">class</span>
+          </div>
+          <div class="file">
+            <div class="file-icon">⚡</div>
+            <div class="file-info">
+              <div class="file-name">GetTaskByIdUseCase.java</div>
+              <div class="file-note">Output record · execute(String id)</div>
+            </div>
+            <span class="badge badge-class">class</span>
+          </div>
+          <div class="file">
+            <div class="file-icon">⚡</div>
+            <div class="file-info">
+              <div class="file-name">GetAllTasksUseCase.java</div>
+              <div class="file-note">Output record · execute() → List</div>
+            </div>
+            <span class="badge badge-class">class</span>
+          </div>
+          <div class="file">
+            <div class="file-icon">⚡</div>
+            <div class="file-info">
+              <div class="file-name">DeleteTaskUseCase.java</div>
+              <div class="file-note">execute(String id) → void</div>
+            </div>
+            <span class="badge badge-class">class</span>
+          </div>
+          <div class="file">
+            <div class="file-icon">🚨</div>
+            <div class="file-info">
+              <div class="file-name">TaskNotFoundException.java</div>
+              <div class="file-note">extends RuntimeException</div>
+            </div>
+            <span class="badge badge-exception">exception</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- INFRASTRUCTURE -->
+  <div class="layer infra">
+    <div class="layer-header">
+      <div class="layer-name">infrastructure</div>
+      <div class="layer-desc">implementa interfaces do domínio · detalhes técnicos</div>
+    </div>
+    <div class="layer-body">
+      <div class="pkg">
+        <div class="pkg-name">repository / memory</div>
+        <div class="files">
+          <div class="file">
+            <div class="file-icon">💾</div>
+            <div class="file-info">
+              <div class="file-name">InMemoryTaskRepository.java</div>
+              <div class="file-note">implements TaskRepository · HashMap storage</div>
+            </div>
+            <span class="badge badge-class">class</span>
+          </div>
+        </div>
+      </div>
+      <div class="pkg">
+        <div class="pkg-name">repository / jpa</div>
+        <div class="files">
+          <div class="file">
+            <div class="file-icon">🗄️</div>
+            <div class="file-info">
+              <div class="file-name">TaskJpaAdapter.java</div>
+              <div class="file-note">implements TaskRepository · usa JPA</div>
+            </div>
+            <span class="badge badge-class">class</span>
+          </div>
+          <div class="file">
+            <div class="file-icon">📦</div>
+            <div class="file-info">
+              <div class="file-name">TaskJpaEntity.java</div>
+              <div class="file-note">@Entity isolada aqui · não vaza para domínio</div>
+            </div>
+            <span class="badge badge-class">class</span>
+          </div>
+          <div class="file">
+            <div class="file-icon">🔄</div>
+            <div class="file-info">
+              <div class="file-name">TaskJpaMapper.java</div>
+              <div class="file-note">Task ↔ TaskJpaEntity</div>
+            </div>
+            <span class="badge badge-class">class</span>
+          </div>
+          <div class="file">
+            <div class="file-icon">🔌</div>
+            <div class="file-info">
+              <div class="file-name">SpringDataTaskRepository</div>
+              <div class="file-note">extends JpaRepository · package-private</div>
+            </div>
+            <span class="badge badge-interface">interface</span>
+          </div>
+        </div>
+      </div>
+      <div class="pkg">
+        <div class="pkg-name">config</div>
+        <div class="files">
+          <div class="file">
+            <div class="file-icon">⚙️</div>
+            <div class="file-info">
+              <div class="file-name">BeanConfiguration.java</div>
+              <div class="file-note">@Bean dos use cases · wiring de dependências</div>
+            </div>
+            <span class="badge badge-class">class</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRESENTATION -->
+  <div class="layer present">
+    <div class="layer-header">
+      <div class="layer-name">presentation</div>
+      <div class="layer-desc">adapters de entrada · HTTP → Use Case → HTTP</div>
+    </div>
+    <div class="layer-body">
+      <div class="pkg">
+        <div class="pkg-name">controller</div>
+        <div class="files">
+          <div class="file">
+            <div class="file-icon">🌐</div>
+            <div class="file-info">
+              <div class="file-name">TaskController.java</div>
+              <div class="file-note">@RestController · chama use cases · devolve DTO</div>
+            </div>
+            <span class="badge badge-class">class</span>
+          </div>
+        </div>
+      </div>
+      <div class="pkg">
+        <div class="pkg-name">dto</div>
+        <div class="files">
+          <div class="file">
+            <div class="file-icon">📨</div>
+            <div class="file-info">
+              <div class="file-name">TaskRequest.java</div>
+              <div class="file-note">dados de entrada da API</div>
+            </div>
+            <span class="badge badge-record">record</span>
+          </div>
+          <div class="file">
+            <div class="file-icon">📤</div>
+            <div class="file-info">
+              <div class="file-name">TaskResponse.java</div>
+              <div class="file-note">dados de saída da API · nunca expõe @Entity</div>
+            </div>
+            <span class="badge badge-record">record</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FLOW -->
+<div class="flow-section">
+  <div class="flow-title">// fluxo de uma requisição POST /tasks</div>
+  <div class="flow">
+    <div class="flow-step present">
+      <div class="flow-box">TaskController</div>
+      <div class="flow-layer">presentation</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step app">
+      <div class="flow-box">CreateTaskUseCase</div>
+      <div class="flow-layer">application</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step domain">
+      <div class="flow-box">Task.create()</div>
+      <div class="flow-layer">domain</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step domain">
+      <div class="flow-box">TaskRepository</div>
+      <div class="flow-layer">domain (interface)</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step infra">
+      <div class="flow-box">TaskJpaAdapter</div>
+      <div class="flow-layer">infrastructure</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step infra">
+      <div class="flow-box">TaskJpaMapper</div>
+      <div class="flow-layer">infrastructure</div>
+    </div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-step infra">
+      <div class="flow-box">SpringDataRepo</div>
+      <div class="flow-layer">infrastructure</div>
+    </div>
+  </div>
+</div>
+
+<!-- RULES -->
+<div class="rules">
+  <div class="rule">
+    <div class="rule-icon">🎯</div>
+    <div class="rule-title">Regra da Dependência</div>
+    <div class="rule-desc">Dependências sempre apontam para dentro. domain nunca importa infra ou presentation.</div>
+  </div>
+  <div class="rule">
+    <div class="rule-icon">🔒</div>
+    <div class="rule-title">@Entity isolada</div>
+    <div class="rule-desc">TaskJpaEntity fica em infra/jpa. O domínio usa Task pura, sem anotações JPA.</div>
+  </div>
+  <div class="rule">
+    <div class="rule-icon">🧪</div>
+    <div class="rule-title">Testes sem Spring</div>
+    <div class="rule-desc">Task e use cases são testáveis com new Task.create() — zero mock de framework.</div>
+  </div>
+  <div class="rule">
+    <div class="rule-icon">🔄</div>
+    <div class="rule-title">Trocar ORM</div>
+    <div class="rule-desc">InMemory ↔ JPA ↔ JDBC via @Primary no adapter. Zero mudança em domain e application.</div>
+  </div>
+  <div class="rule">
+    <div class="rule-icon">📦</div>
+    <div class="rule-title">@Service proibido</div>
+    <div class="rule-desc">Use cases são POJO. O Spring os conhece apenas via @Bean no BeanConfiguration.</div>
+  </div>
+  <div class="rule">
+    <div class="rule-icon">🚫</div>
+    <div class="rule-title">@Entity no domínio</div>
+    <div class="rule-desc">O pacote domain/ nunca deve conter anotações JPA, Spring ou qualquer framework.</div>
+  </div>
+</div>
+
+</body>
+</html>

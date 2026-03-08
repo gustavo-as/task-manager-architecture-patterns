@@ -1,6 +1,6 @@
 package com.gustavohub.clean.presentation.controller;
 
-import com.gustavohub.clean.application.usecase.*;
+import com.gustavohub.clean.application.usecase.tasks.*;
 import com.gustavohub.clean.presentation.dto.TaskRequest;
 import com.gustavohub.clean.presentation.dto.TaskResponse;
 import lombok.RequiredArgsConstructor;
