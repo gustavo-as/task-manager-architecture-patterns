@@ -12,11 +12,16 @@ public class GetAllTasksUseCase {
         this.taskRepository = taskRepository;
     }
 
-    public record Output(String id, String title, String description, boolean completed) {}
+    public record Output(Long id, String title, String description, boolean completed) {}
 
-    public List<CreateTaskUseCase.Output> execute() {
+    public List<Output> execute() {
         return taskRepository.findAll().stream()
-                .map(CreateTaskUseCase::toOutput)
-                .toList();
+                .map(t -> new Output(
+                        t.getId(),
+                        t.getTitle(),
+                        t.getDescription(),
+                        t.isCompleted()
+                        )
+                ).toList();
     }
 }

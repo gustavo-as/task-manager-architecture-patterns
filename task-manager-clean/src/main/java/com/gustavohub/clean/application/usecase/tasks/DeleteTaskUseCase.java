@@ -4,15 +4,13 @@ import com.gustavohub.clean.domain.repository.TaskRepository;
 
 public class DeleteTaskUseCase {
 
-
     private final TaskRepository taskRepository;
 
     public DeleteTaskUseCase(TaskRepository taskRepository) {
         this.taskRepository = taskRepository;
     }
 
-    public void execute(String id) {
-        // lança exceção de domínio em vez de retornar boolean
+    public void execute(Long id) {
         taskRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id));
         taskRepository.deleteById(id);
