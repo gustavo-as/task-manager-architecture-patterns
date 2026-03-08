@@ -10,17 +10,10 @@ import java.util.UUID;
 @AllArgsConstructor
 public class Task {
 
-    private String id;
+    private Long id;
     private String title;
     private String description;
     private boolean completed;
     private LocalDateTime createdAt;
 
-    public Task(String title, String description) {
-        this.id = UUID.randomUUID().toString();
-        this.title = title;
-        this.description = description;
-        this.completed = false;
-        this.createdAt = LocalDateTime.now();
-    }
 }
