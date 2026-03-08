@@ -1,6 +1,35 @@
 server:
   port: 8081
 
+# ─────────────────────────────────────────────
+# H2 In-Memory Database
+# ─────────────────────────────────────────────
 spring:
   application:
     name: task-manager-clean
+  datasource:
+    url: jdbc:h2:mem:taskdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+# ─────────────────────────────────────────────
+# Adapter selector: jpa | jdbc | memory
+# ─────────────────────────────────────────────
+app:
+  persistence:
+    adapter: jpa

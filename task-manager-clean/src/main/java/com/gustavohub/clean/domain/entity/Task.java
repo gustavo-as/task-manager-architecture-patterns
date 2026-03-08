@@ -1,17 +1,20 @@
 package com.gustavohub.clean.domain.entity;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
+/**
+ * Entidade de domínio PURA — zero dependências de framework.
+ * Toda regra de negócio vive aqui.
+ */
 public class Task {
-    private final String id;
+
+    private final Long id;
     private String title;
     private String description;
     private boolean completed;
     private final LocalDateTime createdAt;
 
-    // Construtor privado — ninguém cria Task diretamente
-    private Task(String id, String title, String description,
+    private Task(Long id, String title, String description,
                  boolean completed, LocalDateTime createdAt) {
         this.id = id;
         this.title = title;
@@ -20,25 +23,19 @@ public class Task {
         this.createdAt = createdAt;
     }
 
-    // Factory method para nova Task — aplica validações
+    /** Factory: nova Task (sem ID — o banco atribui) */
     public static Task create(String title, String description) {
         validate(title);
-        return new Task(
-                UUID.randomUUID().toString(),
-                title.trim(),
-                description,
-                false,
-                LocalDateTime.now()
-        );
+        return new Task(null, title.trim(), description, false, LocalDateTime.now());
     }
 
-    // Factory method para reconstituir do repositório — sem re-validar
-    public static Task reconstitute(String id, String title, String description,
+    /** Factory: reconstitui do banco */
+    public static Task reconstitute(Long id, String title, String description,
                                     boolean completed, LocalDateTime createdAt) {
         return new Task(id, title, description, completed, createdAt);
     }
 
-    // Regra de negócio protegida na entidade
+    /** Regra: não pode completar duas vezes */
     public void complete() {
         if (this.completed) {
             throw new IllegalStateException("Task is already completed.");
@@ -52,7 +49,6 @@ public class Task {
         this.description = description;
     }
 
-    // Validação de domínio centralizada
     private static void validate(String title) {
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("Task title cannot be blank.");
@@ -62,9 +58,9 @@ public class Task {
         }
     }
 
-    public String getId()                { return id; }
-    public String getTitle()             { return title; }
-    public String getDescription()       { return description; }
-    public boolean isCompleted()         { return completed; }
-    public LocalDateTime getCreatedAt()  { return createdAt; }
+    public Long getId()                { return id; }
+    public String getTitle()           { return title; }
+    public String getDescription()     { return description; }
+    public boolean isCompleted()       { return completed; }
+    public LocalDateTime getCreatedAt(){ return createdAt; }
 }
