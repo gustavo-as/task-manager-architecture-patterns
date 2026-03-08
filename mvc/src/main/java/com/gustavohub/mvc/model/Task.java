@@ -1,23 +1,24 @@
 package com.gustavohub.mvc.model;
 
+import jakarta.persistence.Entity;
 import lombok.*;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+@Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class Task {
 
-    private String id;
+    private Long id;
     private String title;
     private String description;
     private boolean completed;
     private LocalDateTime createdAt;
 
     public Task(String title, String description) {
-        this.id = UUID.randomUUID().toString();
         this.title = title;
         this.description = description;
         this.completed = false;
