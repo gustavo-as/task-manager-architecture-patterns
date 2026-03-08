@@ -1,7 +1,7 @@
 package com.gustavohub.mvc.controller;
 
 import com.gustavohub.mvc.model.Task;
-import com.gustavohub.mvc.model.TaskRepository;
+import com.gustavohub.mvc.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +23,7 @@ public class TaskController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Task> findById(@PathVariable String id) {
+    public ResponseEntity<Task> findById(@PathVariable Long id) {
         return taskRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -31,34 +31,39 @@ public class TaskController {
 
     @PostMapping
     public ResponseEntity<Task> create(@RequestBody Task task) {
-        Task created = taskRepository.save(new Task(task.getTitle(), task.getDescription()));
+        Task created = taskRepository.save(
+                new Task(
+                        task.getTitle(),
+                        task.getDescription()
+                )
+        );
         return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Task> update(@PathVariable String id, @RequestBody Task task) {
+    public ResponseEntity<Task> update(@PathVariable Long id, @RequestBody Task task) {
         return taskRepository.findById(id)
                 .map(existing -> {
                     existing.setTitle(task.getTitle());
                     existing.setDescription(task.getDescription());
                     existing.setCompleted(task.isCompleted());
-                    return ResponseEntity.ok(taskRepository.update(existing));
+                    return ResponseEntity.ok(taskRepository.save(existing));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PatchMapping("/{id}/complete")
-    public ResponseEntity<Task> complete(@PathVariable String id) {
+    public ResponseEntity<Task> complete(@PathVariable Long id) {
         return taskRepository.findById(id)
                 .map(existing -> {
                     existing.setCompleted(true);
-                    return ResponseEntity.ok(taskRepository.update(existing));
+                    return ResponseEntity.ok(taskRepository.save(existing));
                 })
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
         if (taskRepository.findById(id).isEmpty()) {
             return ResponseEntity.notFound().build();
         }
