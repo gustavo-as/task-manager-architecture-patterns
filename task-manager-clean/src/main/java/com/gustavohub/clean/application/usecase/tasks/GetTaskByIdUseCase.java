@@ -11,11 +11,11 @@ public class GetTaskByIdUseCase {
         this.taskRepository = taskRepository;
     }
 
-    public record Output(String id, String title, String description, boolean completed) {}
+    public record Output(Long id, String title, String description, boolean completed) {}
 
-    public Output execute(String id) {
+    public Output execute(Long id) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new TaskNotFoundException(id));
-        return CreateTaskUseCase.toOutput(task);
+        return new Output(task.getId(), task.getTitle(), task.getDescription(), task.isCompleted());
     }
 }
